@@ -1,66 +1,51 @@
-# dockerized-idp-testbed
+# dockerized-idp-testbed Concord edition
 
-Used to validate the following Unicon docker images:
+This is an IDP you can run locally that works for single sign-on with Concord.
 
-- shibboleth-idp: [https://hub.docker.com/r/unicon/shibboleth-idp](https://github.com/Unicon/shibboleth-idp-dockerized).
-- shibboleth-sp: [https://hub.docker.com/r/unicon/shibboleth-sp](https://github.com/Unicon/shibboleth-sp-dockerized).
-- simplesamlphp: [https://hub.docker.com/r/unicon/simplesamlphp](https://github.com/Unicon/simplesamlphp-dockerized).
+Derived from the great work done here: https://github.com/UniconLabs/dockerized-idp-testbed
 
-More documentation is forthcoming, but it's a full working IDP, SP, and LDAP server that runs under `docker-compose`. 
+If you have any issues not mentionned in this doc, see their documentation which will be more helpful.
 
-1. Update the `idp/Dockerfile` with the version of the base image you want to test.
-2. Call `docker-compose build` and then `docker-compose up` (or `docker-compose up -d` to run as a daemon).
-3. Browse to `https://idptestbed/` (after setting up an `etc/hosts` file entry pointing to your Docker Host IP), and you can login with `staff1` and `password`.  
-4. `ctrl+c` then `docker-compose rm` cleans everything up to try again.
+## Preparing the IDP
 
-## Prepping for the Test
+1. Follow the documentation on Concord to generate your local metadata. Let's call this file `concord-metadata.xml`
+2. Copy this file in `idp/shibboleth-idp/metadata`
+3. If you changed the file's name, then report that name in `shibboleth-idp/conf/metadata-providers.xml` on the line with 
+`<MetadataProvider id="LocalMetadata" `
+4. For your test, you should have a domain name identified. Use it in the `ldap/users.ldif` file, where the user emails are defined. You can also add users there if you wish.
+5. Build with `docker-compose build`
+6. Run with `docker-compose up` (append `-d` for daemon mode)
 
-If testing the Shibboleth IdP build process locally, you'll want to make sure to `docker pull centos:centos7` to ensure that you have the latest before building the IdP. This will ensure that your version will match what Docker Hub will use when it builds. 
+7. (Only once) Add your Docker Host IP to `etc/hosts` with the following line:
 
-Build the IdP with `docker build --tag="unicon/shibboleth-idp:<version>" .`. Make sure the `FROM` entry in testbed's `idp/Dockerfile` matches the tag used in the idp build  or Docker Compose will pull the wrong version when running the Testbed (see step #1).
-
-If testing the SimpleSAMLphp build process locally, you'll want to make sure to `docker pull centos:centos7` to ensure that you have the latest before building the image. This will ensure that your version will match what Docker Hub will use when it builds. 
-
-Build the application with `docker build --tag="unicon/simplesamlphp:<version>" .`. Make sure the `FROM` entry in testbed's `simplesamlphp/Dockerfile` matches the tag used in the ssp build or Docker Compose will pull the wrong version when running the Testbed (see step #1).
-
-## HTTP/2 support for Shibboleth IdP
-
-HTTP/2 support can be added to Jetty by doing the following:
-
-1. Adding the following to the `idp-http2/Dockerfile`:
- 
-```bash
-RUN cd /opt/shib-jetty-base \
-    && /opt/jre-home/bin/java -jar ../jetty-home/start.jar --add-to-startd=http2 -Dorg.eclipse.jetty.start.ack.licenses=true
-ADD shib-jetty-base/alpn.ini /opt/shib-jetty-base/start.d/
+```
+YOUR_DOCKER_HOST_IP      idptestbed
 ```
 
-> This will automatically accept the GPLv2 license used by the ALPN library utilized by Jetty.
+You can find your Docker Host IP by following these steps:
 
-2. Create and populate `idp-http2/shib-jetty-base/alpn.ini`:
+* run `docker ps` and find the container id for the `dockerized-idp-testbed_httpd-proxy` image.
+* run `docker inspect CONTAINER_ID | grep IPAddress`: this will give the Docker Host IP you need
+to fill in your `hosts` file.
 
-```apache
-# ---------------------------------------
-# Module: alpn
---module=alpn
+8. Go to `https://idptestbed/` and login with one of the users you defined to test login.
 
-## Overrides the order protocols are chosen by the server.
-## The default order is that specified by the order of the
-## modules declared in start.ini.
-# jetty.alpn.protocols=h2-16,http/1.1
+If you need to update users or any other property, you will need to run `docker-compose rm` before
+building the images once more.
 
-## Specifies what protocol to use when negotiation fails.
-jetty.alpn.defaultProtocol=http/1.1
 
-## ALPN debug logging on System.err
-# jetty.alpn.debug=false
-```
+## Setting up Concord
 
-3. Run the container(s): `docker-compose -f docker-compose-http2.yml build && docker-compose -f docker-compose-http2.yml up`.
+The IDP metadata file can be found in `idp/shibboleth-idp/metadata/idp-metadata.xml`
 
-4. Test:
+The attributes sent are listed in the `attribute-filter.xml` file. The following can be used for:
 
-- Open the browser network analyzer tools. 
-- Ensure that the `protocol` type is shown. 1.
-- Browse to `https://idptestbed/idp/`. Chrome, firefox, and safari should show a protocol of "h2".
-- Try `curl -k -v https://idptestbed/idp/`. "HTTP/1.1" will likely be shown as curl (at least on OS X) does not have http/2 support.
+- PPID: urn:oid:0.9.2342.19200300.100.1.1
+- FIRST_NAME: urn:oid:2.5.4.42
+- LAST_NAME: urn:oid:2.5.4.4
+
+
+## Improvements
+
+- webapp to add/edit/remove users easily
+- webapp to add your local instance's metadata and declare it as an SP easily 
