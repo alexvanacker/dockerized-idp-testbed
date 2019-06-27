@@ -154,6 +154,32 @@ Accept to release all attributes when you reach this page
 Congratulations! You logged in via SSO using a locally running IDP!
 
 
+## For testing SAML integration / setup
+
+### Updating an attribute name sent to Concord
+You can change attribute names sent to Concord by editing `idp/shibboleth-idp/conf/attribute-resolver.xml`. Choose one of the attributes sent
+and change the name on the line with `xsi:type="enc:SAML2String"`. Example: you could change the surname to be sent as `surname` instead of `urn:oid:2.5.4.42`
+by replacing
+
+```xml
+<resolver:AttributeEncoder xsi:type="enc:SAML2String" name="urn:oid:2.5.4.4" friendlyName="sn" encodeType="false" />
+```
+
+by
+
+
+```xml
+<resolver:AttributeEncoder xsi:type="enc:SAML2String" name="surname" friendlyName="sn" encodeType="false" />
+```
+After doing so, you will need to rebuild the project:
+
+```bash
+docker-compose rm
+docker-compose build
+docker-compose up
+```
+
+
 ## Improvements
 
 - webapp to add/edit/remove users easily
