@@ -28,9 +28,9 @@ You should have something like:
 saml.entityId=rich.hickey
 ```
 
-2- Run NegoApp and download the file at http://localhost/contract-live/saml/metadata.
+2- Run concord-ws and download the file at http://localhost/contract-live/saml/metadata.
 
-We'll now call this file `nego-app-metadata.xml`.
+We'll now call this file `concord-metadata.xml`.
 
 3- Have an ENTERPRISE_2 organization (have the organization ID ready for later steps).
 
@@ -39,14 +39,14 @@ We'll now call this file `nego-app-metadata.xml`.
 
 In this project:
 
-1- In folder `idp/shibboleth-idp/metadata/`, overwrite the file `concord-metadata.xml` with `nego-app-metadata.xml`.
+1- In folder `idp/shibboleth-idp/metadata/`, overwrite the local file `concord-metadata.xml` with the `concord-metadata.xml` you downloaded earlier.
  
 You can also give it another name instead of overwriting it, 
 but if you do you need to report that name in `idp/shibboleth-idp/conf/metadata-providers.xml` on the line with `<MetadataProvider id="LocalMetadata"`
 
 You would then have:
 ```
-<MetadataProvider id="LocalMetadata"  xsi:type="FilesystemMetadataProvider" metadataFile="%{idp.home}/metadata/nego-app-metadata.xml"/>
+<MetadataProvider id="LocalMetadata"  xsi:type="FilesystemMetadataProvider" metadataFile="%{idp.home}/metadata/concord-metadata.xml"/>
 ```
 
 2- By default, the email domain is `test.com`.
@@ -107,7 +107,7 @@ We'll assume the following:
 
 3- The auth token you get from your app is `1a2b3cxx88...55t` (it should be longer)
 
-You need to get the project in your computer, edit the files and run the scripts:
+You need to get the project on your computer, edit the files and run the scripts:
 
 1- Copy `idp-metadata.xml` in the folder `concordnow/operations/templates/enable_sso`.
 
@@ -154,7 +154,7 @@ The actual attribute names sent are themselves defined in the `attribute-resolve
 
 7- Execute the query `3_after.sql` to make sure the script worked.
 
-8- Cherry-pick the commit `3457487470` (fix for local SSO)
+8- Cherry-pick the commit `3457487470` (fix for local SSO: see [jira ticket](https://contractlive.atlassian.net/browse/CPM-6751))
 
 Git command:
 
