@@ -6,34 +6,75 @@ Derived from the great work done here: https://github.com/UniconLabs/dockerized-
 
 If you have any issues not mentioned in this doc, see their documentation which will be more helpful.
 
+
 ## Prerequisites
 
 - docker
 - [docker-compose](https://docs.docker.com/compose/install/)
 - [Nego-App project](https://github.com/WitchBird/Negotiation-App)
 
+
 ## First steps on Concord
 
 You will need to get your local instance's metadata.xml. To do so, in the Nego-App project:
 
-1. uncomment the line in `src/main/resources/context/saml-security-context.xml` containing `entityId` and set a proper
-entityId (firstname.lastname for instance).
-2. run the app and download the file at http://localhost:8080/contract-live/saml/metadata
-3. have an ENTERPRISE_2 organization (have the organization ID ready for later steps)
+1- Uncomment the line in `src/main/resources/perso.properties` containing `saml.entityId` and set a proper entityId (firstname.lastname for instance). 
+
+You should have something like:
+
+```
+## Saml
+#Uncomment following line and set up your entityId for a local use of SAML
+saml.entityId=rich.hickey
+```
+
+2- Run NegoApp and download the file at http://localhost/contract-live/saml/metadata.
+
+We'll now call this file `nego-app-metadata.xml`.
+
+3- Have an ENTERPRISE_2 organization (have the organization ID ready for later steps).
+
 
 ## Preparing the IDP
 
 In this project:
 
-1. Copy your metadata file in `idp/shibboleth-idp/metadata/`. You can either overwrite `concord-metadata.xml` or give it
-another name. If you give it another name, report that name that name in `shibboleth-idp/conf/metadata-providers.xml` on
-the line with `<MetadataProvider id="LocalMetadata" `
-3. If you wish to test your SSO with an email domain different from `test.com`, then edit `ldap/users.ldif` file, where
-the user emails are defined. You can also add users there if you wish.
-4. Build with `docker-compose build`
-5. Run with `docker-compose up` (append `-d` for daemon mode)
+1- In folder `idp/shibboleth-idp/metadata/`, overwrite the file `concord-metadata.xml` with `nego-app-metadata.xml`.
+ 
+You can also give it another name instead of overwriting it, 
+but if you do you need to report that name in `idp/shibboleth-idp/conf/metadata-providers.xml` on the line with `<MetadataProvider id="LocalMetadata"`
 
-6. (Only once) Add your Docker Host IP to `/etc/hosts` with the following line:
+You would then have:
+```
+<MetadataProvider id="LocalMetadata"  xsi:type="FilesystemMetadataProvider" metadataFile="%{idp.home}/metadata/nego-app-metadata.xml"/>
+```
+
+2- By default, the email domain is `test.com`.
+
+If you wish to test your SSO with a different email domain, then edit `ldap/users.ldif` file, where the user emails are defined. 
+You can also add users there if you wish.
+
+If you want to add users, you can copy an existing user but you have to change both `uid` fields and the `mail` field.
+Example:
+```
+dn: uid=newuser,ou=People,dc=idptestbed
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+objectClass: inetOrgPerson
+givenName: St
+uid: newuser
+sn: aff
+cn: St aff
+mail: newuser@test.com
+userPassword: password
+```
+
+3- Build with `docker-compose build` (it's easier to use the command line than Intellij)
+
+4- Run with `docker-compose up` (append `-d` for daemon mode)
+
+5- (Only once) Add your Docker Host IP to `/etc/hosts`. To do that, add the following line:
 
 ```
 YOUR_DOCKER_HOST_IP      idptestbed
@@ -42,114 +83,92 @@ YOUR_DOCKER_HOST_IP      idptestbed
 You can find your Docker Host IP by following these steps:
 
 * run `docker ps` and find the container id for the `dockerized-idp-testbed_httpd-proxy` image.
-* run `docker inspect CONTAINER_ID | grep IPAddress`: this will give the Docker Host IP you need to fill in your `hosts`
-file. (If there are two VALUES, use the last one).
+* run `docker inspect CONTAINER_ID | grep IPAddress`: this will give the Docker Host IP you need to fill in your `hosts` file. 
+(If there are two VALUES, use the last one).
 
-8. Go to `https://idptestbed/` and accept the invalid SSL certificate. Login with one of the users in `ldap/users.ldif`
-using the `uid` and `userPassword` from that file.
+6- Go to `https://idptestbed/` and accept the invalid SSL certificate. 
+Login with one of the users in `ldap/users.ldif` using the `uid` and `userPassword` from that file.
 
-If you need to update users or any other property, you will need to run `docker-compose rm` before
-building the images once more.
+If you need to update users or any other property, you will need to run `docker-compose rm` before building the images once more.
 
 
 ## Setting up Concord
 
-The IDP metadata file can be found in `idp/shibboleth-idp/metadata/idp-metadata.xml`. Copy it in `src/main/resources/sso`
-and name it `local-idp-meta.xml`.
+The IDP metadata file can be found in `idp/shibboleth-idp/metadata/idp-metadata.xml`. 
+We'll now call this file `idp-metadata.xml`.
 
-Add the following block to `src/main/resources/context/saml-security-context.xml`, in the
-`<bean id="metadata" class="org.springframework.security.saml.metadata.CachingMetadataManager"><constructor-arg><list>` node:
+In the project [operations](https://github.com/concordnow/operations/) you can find the scripts to setup NegoApp in [templates/enable_sso](https://github.com/concordnow/operations/tree/master/templates/enable_sso)
 
+We'll assume the following:
 
-```xml
-<bean class="org.springframework.security.saml.metadata.ExtendedMetadataDelegate">
-    <property name="metadataTrustCheck" value="false"/>
-    <constructor-arg>
-        <bean class="org.opensaml.saml2.metadata.provider.ResourceBackedMetadataProvider">
-            <constructor-arg>
-                <bean class="java.util.Timer"/>
-            </constructor-arg>
-            <constructor-arg>
-                <bean class="org.opensaml.util.resource.ClasspathResource">
-                    <constructor-arg value="/sso/local-idp-meta.xml"/>
-                </bean>
-            </constructor-arg>
-            <property name="parserPool" ref="parserPool"/>
-        </bean>
-    </constructor-arg>
-    <constructor-arg>
-        <bean class="org.springframework.security.saml.metadata.ExtendedMetadata" />
-    </constructor-arg>
-</bean>
+1- The organization_id you found earlier (in step `Have an ENTERPRISE_2 organization`) is `1234`
+
+2- The idp_metadata file is called `idp-metadata.xml`
+
+3- The auth token you get from your app is `1a2b3cxx88...55t` (it should be longer)
+
+You need to get the project in your computer, edit the files and run the scripts:
+
+1- Copy `idp-metadata.xml` in the folder `concordnow/operations/templates/enable_sso`.
+
+2- In `2_operations.sh`: 
+
+  - 2.1- set the `ORGANIZATION_ID` field with the organization_id you found earlier (in step `Have an ENTERPRISE_2 organization`) -> `ORGANIZATION_ID="1234"`
+  
+  - 2.2- set the `METADATA_TRUST_CHECK` to `true` -> `METADATA_TRUST_CHECK=true`
+  
+  - 2.3- edit the TWO curl requests from `https://secure.concordnow.com` to `http://localhost/contract-live` -> `curl --request POST "http://localhost/contract-live/api/rest/1/........" \`
+    
+  - 2.4- edit `--form "metadata=` with your idp_metadata file -> `--form "metadata=@idp-metadata.xml" \`
+  
+  - 2.5- edit the `AUTH` field with your auth token (you can get this by connecting to an account, look at the network requests) -> `AUTH="1a2b3cxx88...55t"`
+   
+Note: You could probably use an API-KEY instead of the `AUTH` field but I'll let you figure that out yourselves.
+    
+3- In `body_first_name_last_name.json`:
+
+By default, you should set it like this:
+
+``` 
+{
+  "emailDomain": "test.com",
+  "idp": "https://idptestbed/idp/shibboleth",
+  "ppid": "urn:oid:0.9.2342.19200300.100.1.1",
+  "firstName": "urn:oid:2.5.4.4",
+  "lastName": "urn:oid:2.5.4.42"
+}
 ```
 
-It should look like this:
+If you changed the emailDomain earlier, change it here as well.
 
-```xml
-<bean id="metadata" class="org.springframework.security.saml.metadata.CachingMetadataManager">
-    <constructor-arg>
-        <list>
-            <bean class="org.springframework.security.saml.metadata.ExtendedMetadataDelegate">
-                <property name="metadataTrustCheck" value="false"/>
-                <constructor-arg>
-                    <bean class="org.opensaml.saml2.metadata.provider.ResourceBackedMetadataProvider">
-                        <constructor-arg>
-                            <bean class="java.util.Timer"/>
-                        </constructor-arg>
-                        <constructor-arg>
-                            <bean class="org.opensaml.util.resource.ClasspathResource">
-                                <constructor-arg value="/sso/local-idp-meta.xml"/>
-                            </bean>
-                        </constructor-arg>
-                        <property name="parserPool" ref="parserPool"/>
-                    </bean>
-                </constructor-arg>
-                <constructor-arg>
-                    <bean class="org.springframework.security.saml.metadata.ExtendedMetadata" />
-                </constructor-arg>
-            </bean>
-            <!-- ... more declarations ... -->
-        </list>
-    </constructor-arg>
-</bean>
-```
+The attributes sent (`ppid`, `firstName` and `lastName`), as defined above, are for a basic setup.
 
-The attributes sent are listed in the `attribute-filter.xml` file. The actual attribute names sent are themselves
-defined in the `attribute-resolver.xml` file. If you are not testing for specific attributes, you can use the following
-for the saml_attribute setup in the application's database (see below):
+If you are testing for specific attributes, the attributes sent are listed in the `attribute-filter.xml` file. 
+The actual attribute names sent are themselves defined in the `attribute-resolver.xml` file. 
 
-- PPID: urn:oid:0.9.2342.19200300.100.1.1
-- FIRST_NAME: urn:oid:2.5.4.42
-- LAST_NAME: urn:oid:2.5.4.4
+4- Rename `body_first_name_last_name.json` to `body.json` (or change the `--data @body.json \` field in `2_operations.sh`)
 
-So on your database, assuming your organization ID is `1` you would run the following:
+5- Execute the query `1_before.sql` to make sure the saml_integration data is NULL.
 
-```sql
-INSERT INTO saml_integration (domain, idp, organization_id) VALUES ('test.com','https://idptestbed/idp/shibboleth', 1);
+6- Execute the script `2_operations.sh`.
 
-INSERT INTO saml_attribute (type, name, saml_integration_id)
-SELECT 'PPID', 'urn:oid:0.9.2342.19200300.100.1.1', saml_integration.id
-FROM saml_integration
-WHERE saml_integration.idp = 'https://idptestbed/idp/shibboleth' AND saml_integration.domain = "test.com";
+7- Execute the query `3_after.sql` to make sure the script worked.
 
-INSERT INTO saml_attribute (type, name, saml_integration_id)
-SELECT 'LAST_NAME', 'urn:oid:2.5.4.42', saml_integration.id
-FROM saml_integration
-WHERE saml_integration.idp = 'https://idptestbed/idp/shibboleth' AND saml_integration.domain = "test.com";
+8- Cherry-pick the commit `3457487470` (fix for local SSO)
 
-INSERT INTO saml_attribute (type, name, saml_integration_id)
-SELECT 'FIRST_NAME', 'urn:oid:2.5.4.4', saml_integration.id
-FROM saml_integration
-WHERE saml_integration.idp = 'https://idptestbed/idp/shibboleth' AND saml_integration.domain = "test.com";
-```
+Git command:
 
-You will need to restart your Concord app. Then login via SSO using a `test.com` email address. You should be redirected
-to the IDP. Login with `uid` and `userPassword` defined in `ldap/users.ldif`.
+`git cherry-pick 3457487470`
+
+9- Restart NegoApp.
+
+10-Login via SSO using a `test.com` email address. You should be redirected to the IDP. 
+
+Login with `uid` and `userPassword` defined in `ldap/users.ldif`.
 
 Accept to release all attributes when you reach this page
 
 ![release_attributes](https://github.com/concordnow/dockerized-idp-testbed/raw/master/doc/idp-release-example.png "IDP login example")
-
 
 Congratulations! You logged in via SSO using a locally running IDP!
 
@@ -157,6 +176,7 @@ Congratulations! You logged in via SSO using a locally running IDP!
 ## For testing SAML integration / setup
 
 ### Updating an attribute name sent to Concord
+
 You can change attribute names sent to Concord by editing `idp/shibboleth-idp/conf/attribute-resolver.xml`. Choose one of the attributes sent
 and change the name on the line with `xsi:type="enc:SAML2String"`. Example: you could change the surname to be sent as `surname` instead of `urn:oid:2.5.4.42`
 by replacing
