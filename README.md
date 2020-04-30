@@ -11,7 +11,8 @@ If you have any issues not mentioned in this doc, see their documentation which 
 
 - docker
 - [docker-compose](https://docs.docker.com/compose/install/)
-- [Nego-App project](https://github.com/WitchBird/Negotiation-App)
+- [Nego-App project](https://github.com/concordnow/Negotiation-App)
+- [Concord Front App](https://github.com/concordnow/concord-app-front)
 
 
 ## First steps on Concord
@@ -28,11 +29,13 @@ You should have something like:
 saml.entityId=rich.hickey
 ```
 
-2- Run concord-ws and download the file at http://localhost/contract-live/saml/metadata.
+2- Run the dev-proxy and npm run serve in the concord-app-front project.
+
+3- Run concord-ws and download the file at http://localhost/contract-live/saml/metadata.
 
 We'll now call this file `concord-metadata.xml`.
 
-3- Have an ENTERPRISE_2 organization (have the organization ID ready for later steps).
+4- Have an ENTERPRISE_2 organization (have the organization ID ready for later steps).
 
 
 ## Preparing the IDP
