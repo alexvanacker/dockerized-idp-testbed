@@ -57,7 +57,7 @@ You would then have:
 If you wish to test your SSO with a different email domain, then edit `ldap/users.ldif` file, where the user emails are defined. 
 You can also add users there if you wish.
 
-If you want to add users, you can copy an existing user but you have to change both `uid` fields and the `mail` field.
+If you want to add users, you can copy an existing user, but you have to change both `uid` fields and the `mail` field.
 Example:
 ```
 dn: uid=newuser,ou=People,dc=idptestbed
@@ -75,6 +75,17 @@ userPassword: password
 
 3- Build with `docker-compose build` (it's easier to use the command line than Intellij)
 
+If you run into this error:
+```
+Step 8/14 : RUN pear install -Z CAS-1.3.4.tgz  && rm /CAS-1.3.4.tgz
+ ---> Running in e305cfec6438
+could not extract the package.xml file from "CAS-1.3.4.tgz"
+install failed
+ERROR: Service 'php-cas' failed to build: The command '/bin/sh -c pear install -Z CAS-1.3.4.tgz  && rm /CAS-1.3.4.tgz' returned a non-zero code: 1
+```
+You may just remove ` RUN pear install -Z CAS-1.3.4.tgz  && rm /CAS-1.3.4.tgz` from `php-cas/Dockerfile`.
+It will not affect SAML test bench
+
 4- Run with `docker-compose up` (append `-d` for daemon mode)
 
 5- (Only once) Add your Docker Host IP to `/etc/hosts`. To do that, add the following line:
@@ -90,10 +101,9 @@ You can find your Docker Host IP by following these steps:
 (If there are two VALUES, use the last one).
 
 6- Go to `https://idptestbed/` and accept the invalid SSL certificate. 
-Login with one of the users in `ldap/users.ldif` using the `uid` and `userPassword` from that file.
+You should be able to login, into the simpleSAML service with one of the users in `ldap/users.ldif` using the `uid` and `userPassword` from that file.
 
-If you need to update users or any other property, you will need to run `docker-compose rm` before building the images once more.
-
+:warning: If you need to update users or any other property, you will need to run `docker-compose build --no-cache` to build the images once more.
 
 ## Setting up Concord
 
@@ -126,7 +136,8 @@ You need to get the project on your computer, edit the files and run the scripts
   
   - 2.5- edit the `AUTH` field with your auth token (you can get this by connecting to an account, look at the network requests) -> `AUTH="1a2b3cxx88...55t"`
    
-Note: You could probably use an API-KEY instead of the `AUTH` field but I'll let you figure that out yourselves.
+Note: Make sure your user has the `ROLE_TECH` in `user.granted_authorities` (comma-separated list of special roles)
+Note: You could probably use an API-KEY instead of the `AUTH` field, but I'll let you figure that out yourselves.
     
 3- In `body_first_name_last_name.json`:
 
@@ -157,15 +168,9 @@ The actual attribute names sent are themselves defined in the `attribute-resolve
 
 7- Execute the query `3_after.sql` to make sure the script worked.
 
-8- Cherry-pick the commit `3457487470` (fix for local SSO: see [jira ticket](https://contractlive.atlassian.net/browse/CPM-6751))
+8- Restart NegoApp.
 
-Git command:
-
-`git cherry-pick 3457487470`
-
-9- Restart NegoApp.
-
-10-Login via SSO using a `test.com` email address. You should be redirected to the IDP. 
+9-Login via SSO using a `test.com` email address. You should be redirected to the IDP. 
 
 Login with `uid` and `userPassword` defined in `ldap/users.ldif`.
 
