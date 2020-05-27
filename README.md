@@ -202,6 +202,14 @@ docker-compose build
 docker-compose up
 ```
 
+### Enabling IDP-init (AKA unsollicited) flow
+
+You will need to edit your metadata by changing the `AuthnRequestsSigned` to `"false"``.
+
+You will then need to edit the [index.php file](simplesamlphp/var-www-html/php-ssp-protected/index.php) and change `alexis.vanacker` to your Concord-WS's entity ID.
+
+Rebuild the project.
+Go to https://idptestbed/ and login using the Simple SAML PHP app. The ugly page has a link IDP-init that will lead to a Concord login.
 
 ## Improvements
 
