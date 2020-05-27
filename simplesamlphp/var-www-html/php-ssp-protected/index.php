@@ -9,7 +9,10 @@
 ?>
 <html>
 <body>
-	<p><a href="/">Main Menu</a></p>
+
+<p><a href="https://idptestbed/idp/profile/SAML2/Unsolicited/SSO?providerId=alexis.vanacker">IDP-init</a></p>
+
+<p><a href="/">Main Menu</a></p>
 <?php print_r($attributes); ?>
 
 </body>
