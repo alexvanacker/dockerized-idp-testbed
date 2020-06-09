@@ -94,11 +94,10 @@ It will not affect SAML test bench
 YOUR_DOCKER_HOST_IP      idptestbed
 ```
 
-You can find your Docker Host IP by following these steps:
-
-* run `docker ps` and find the container id for the `dockerized-idp-testbed_httpd-proxy` image.
-* run `docker inspect CONTAINER_ID | grep IPAddress`: this will give the Docker Host IP you need to fill in your `hosts` file. 
-(If there are two VALUES, use the last one).
+You can find your Docker Host IP by running:
+```shell script
+docker inspect -f '{{(index .NetworkSettings.Networks "dockerized-idp-testbed_front").IPAddress}}' dockerized-idp-testbed_httpd-proxy_1
+```
 
 6- Go to `https://idptestbed/` and accept the invalid SSL certificate. 
 You should be able to login, into the simpleSAML service with one of the users in `ldap/users.ldif` using the `uid` and `userPassword` from that file.
@@ -195,6 +194,22 @@ by replacing
 
 by
 
+### Modifying the NameId sent in the SAML token
+
+You can change the way the NameId is built by changing the [saml-nameid.xml](idp/shibboleth-idp/conf/saml-nameid.xml).
+There is a bean declaration of `SAML2NameIDGenerators` and the NameId construction is specified
+at line 37 with `p:attributeSourceIds="#{ {'mail'} }"`.
+
+To have an empty NameId, change it to:
+`p:attributeSourceIds="#{ '' }"`
+
+To have a NameId that is not the email but the uid, change it to:
+`p:attributeSourceIds="#{ {'uid'} }"`
+
+I did not test, but I believe you could build whatever NameId you need based on users properties
+from [users.ldif](ldap/users.ldif).
+
+You will need to rebuild the project to take this changes in account.
 
 ```xml
 <resolver:AttributeEncoder xsi:type="enc:SAML2String" name="surname" friendlyName="sn" encodeType="false" />
@@ -202,9 +217,8 @@ by
 After doing so, you will need to rebuild the project:
 
 ```bash
-docker-compose rm
-docker-compose build
-docker-compose up
+docker-compose down
+docker-compose up --build
 ```
 
 ### Enabling IDP-init (AKA unsollicited) flow
